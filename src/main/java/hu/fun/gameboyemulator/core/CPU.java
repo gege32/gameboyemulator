@@ -10,7 +10,7 @@ public class CPU {
 
 	private int A, B, C, D, E, F, H, L, SP, PC;
 
-	private boolean zero, substract, halfcarry, carry;
+	private boolean zero, subtract, halfcarry, carry;
 
 	private boolean halt;
 
@@ -38,7 +38,7 @@ public class CPU {
 		SP = 0xfffe;
 
 		zero = false;
-		substract = false;
+		subtract = false;
 		halfcarry = false;
 		carry = false;
 		halt = false;
@@ -46,6 +46,7 @@ public class CPU {
 
 	private void parseCommand(int command) {
 		int data;
+		int temp;
 		switch (command) {
 		case 0x0: // mnemonic":"NOP","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			break;
@@ -57,7 +58,7 @@ public class CPU {
 		case 0x3: // mnemonic":"INC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x4: // mnemonic":"INC","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
 			B++;
-			substract = false;
+			subtract = false;
 			if (B == 0x0100) {
 				zero = true;
 				B = 0x0000;
@@ -161,7 +162,7 @@ public class CPU {
 			break;
 		case 0x2f: // mnemonic":"CPL","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","1","1","-"]}
 			A = (~A) & 0xff;
-			substract = true;
+			subtract = true;
 			halfcarry = true;
 			break;
 		case 0x30: // mnemonic":"JR","operands":["NC","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
@@ -179,7 +180,7 @@ public class CPU {
 		case 0x35: // mnemonic":"DEC","operands":["(HL)"],"bytes":1,"cycles":12,"flagsZNHC":["Z","1","H","-"]}
 		case 0x36: // mnemonic":"LD","operands":["(HL)","d8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 		case 0x37: // mnemonic":"SCF","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","0","0","1"]}
-			substract = false;
+			subtract = false;
 			halfcarry = false;
 			carry = true;
 		case 0x38: // mnemonic":"JR","operands":["C","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
@@ -199,7 +200,7 @@ public class CPU {
 			A = membus.readROM(PC++);
 			break;
 		case 0x3f: // mnemonic":"CCF","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","0","0","C"]}
-			substract = false;
+			subtract = false;
 			halfcarry = false;
 			if (carry)
 				carry = false;
@@ -398,13 +399,97 @@ public class CPU {
 			// A = A;
 			break;
 		case 0x80: // mnemonic":"ADD","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + B;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x81: // mnemonic":"ADD","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + C;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x82: // mnemonic":"ADD","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + D;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x83: // mnemonic":"ADD","operands":["A","E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + E;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x84: // mnemonic":"ADD","operands":["A","H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + H;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x85: // mnemonic":"ADD","operands":["A","L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + L;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x86: // mnemonic":"ADD","operands":["A","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0x87: // mnemonic":"ADD","operands":["A","A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
+			temp = A + A;
+			if(temp > 0xff) {
+				carry = true;
+			}else {
+				carry = false;
+			}if((temp & 0xf0) != (A & 0xf0)) {
+				halfcarry = true;
+			}
+			A = temp;
+			A = A & 0xff;
+			subtract = false;
+			break;
 		case 0x88: // mnemonic":"ADC","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 		case 0x89: // mnemonic":"ADC","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 		case 0x8a: // mnemonic":"ADC","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
