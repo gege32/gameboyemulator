@@ -1,7 +1,7 @@
 package hu.fun.gameboyemulator.core;
 
 public class Memory {
-
+	
 	private int[] rom;
 	
 	private int[] ram;
