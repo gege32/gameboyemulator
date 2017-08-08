@@ -8,15 +8,11 @@ public class MemoryBus {
 		this.memory = mem;
 	}
 	
-	public int readROM(int address) {
-		return memory.readROM(address);
-	}
-	
-	public int readRAM(int address) {
+	public int readMem(int address) {
 		return memory.readRAM(address);
 	}
 	
-	public void writeRAM(int address, int value) {
+	public void writeMem(int address, int value) {
 		memory.writeRAM(address, value);;
 	}
 	

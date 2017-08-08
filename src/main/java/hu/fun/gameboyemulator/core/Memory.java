@@ -1,21 +1,14 @@
 package hu.fun.gameboyemulator.core;
 
 public class Memory {
-	
-	private int[] rom;
-	
+		
 	private int[] ram;
 	
 	private CartridgeType ct;
 	
 	public Memory(int[] rom) {
-		this.rom = rom;
-//		int ct = rom[Globals.CARTRIDGE_TYPE_ADDRESS];
-		this.ram = new int[0x7fff];
-	}
-	
-	public int readROM(int address) {
-		return rom[address];
+		this.ram = new int[0x10000];
+		System.arraycopy(rom, 0, ram, 0, rom.length);
 	}
 	
 	public int readRAM(int address) {

@@ -34,12 +34,17 @@ public class Device {
 		MemoryBus bus = new MemoryBus(this.memory);
 		cpu = loader.createCPU(bus);
 		cpu.start();
+		display = new Display(bus);
+		
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		display.setVisible(true);
+
+		
 	}
 	
 	
