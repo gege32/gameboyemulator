@@ -25,7 +25,7 @@ public class CPU {
 	private MemoryBus membus;
 
 	private void tick() {
-		++PC;
+		
 		PC = PC & 0xffff;
 		int command = membus.readMem(PC);
 		parseCommand(command);
@@ -52,6 +52,7 @@ public class CPU {
 	private void parseCommand(int command) {
 		System.out.println(Integer.toHexString(command));
 		int data;
+		
 		switch (command) {
 		case 0x0: // mnemonic":"NOP","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			break;
@@ -74,6 +75,11 @@ public class CPU {
 			B = membus.readMem(++PC);
 			break;
 		case 0x7: // mnemonic":"RLCA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
+			flagRegister |= (A & 0x80) & carry;
+			A = ((A << 1) & 0xff) | (A >> 7);
+			flagRegister &= ~subtract;
+			flagRegister &= ~halfcarry;
+//			flagRegister &= 
 		case 0x8: // mnemonic":"LD","operands":["(a16)","SP"],"bytes":3,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 			SP = membus.readMem(++PC) + (membus.readMem(++PC) << 8);
 			break;
@@ -671,7 +677,7 @@ public class CPU {
 		flagRegister |= ((prm1 + prm2) & 0xff) != 0 ? carry : ~carry;
 		ret = (prm1 + prm2) & 0xff;
 		flagRegister |= ~subtract;
-		flagRegister |= ret == 0 ? zero : ~zero; 
+		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
 		return ret;
 	}
 	
@@ -682,7 +688,7 @@ public class CPU {
 		flagRegister |= ((prm1 + prm2 + cry) & 0xff) != 0 ? carry : ~carry;
 		ret = (prm1 + prm2 + cry) & 0xff;
 		flagRegister |= ~subtract;
-		flagRegister |= ret == 0 ? zero : ~zero;
+		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
 		return ret;
 	}
 	
@@ -693,7 +699,7 @@ public class CPU {
 		ret = (prm1 - prm2) & 0xff;
 		
 		flagRegister |= subtract;
-		flagRegister |= ret == 0 ? zero : ~zero; 
+		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
 		return ret;
 	}
 	
