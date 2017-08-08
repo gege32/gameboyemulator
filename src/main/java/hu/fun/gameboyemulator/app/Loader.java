@@ -9,8 +9,10 @@ import java.util.Arrays;
 
 import org.apache.log4j.Logger;
 
+import hu.fun.gameboyemulator.core.CPU;
 import hu.fun.gameboyemulator.core.Globals;
 import hu.fun.gameboyemulator.core.Memory;
+import hu.fun.gameboyemulator.core.MemoryBus;
 
 public class Loader {
 	
@@ -47,6 +49,11 @@ public class Loader {
 		Memory ret = new Memory(romImage);
 		
 		return ret;
+	}
+	
+	public CPU createCPU(MemoryBus bus) {
+		CPU cpu = new CPU(bus);
+		return cpu;
 	}
 	
 	public String getGameName() {

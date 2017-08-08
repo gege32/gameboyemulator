@@ -11,6 +11,7 @@ public class Memory {
 	public Memory(int[] rom) {
 		this.rom = rom;
 //		int ct = rom[Globals.CARTRIDGE_TYPE_ADDRESS];
+		this.ram = new int[0x7fff];
 	}
 	
 	public int readROM(int address) {

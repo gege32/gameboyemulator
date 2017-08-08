@@ -9,22 +9,30 @@ public class CPU {
 	private Clock clock;
 
 	private int A, B, C, D, E, F, H, L, SP, PC;
-
-	private boolean zero, subtract, halfcarry, carry;
+	
+	private int flagRegister = 0x00;
+	
+	private int zero = 0x70;
+	
+	private int subtract = 0x60;
+	
+	private int halfcarry = 0x50;
+	
+	private int carry = 0x40;
 
 	private boolean halt;
 
 	private MemoryBus membus;
 
 	private void tick() {
-		PC++;
+		++PC;
 		int command = membus.readROM(PC);
 		parseCommand(command);
 	}
 
 	public CPU(MemoryBus membus) {
 		clock = new Clock();
-		membus = membus;
+		this.membus = membus;
 
 		// init register
 		PC = 0x0100;
@@ -37,50 +45,34 @@ public class CPU {
 		L = 0xD4;
 		SP = 0xfffe;
 
-		zero = false;
-		subtract = false;
-		halfcarry = false;
-		carry = false;
 		halt = false;
 	}
 
 	private void parseCommand(int command) {
+		System.out.println(Integer.toHexString(command));
 		int data;
-		int temp;
 		switch (command) {
 		case 0x0: // mnemonic":"NOP","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			break;
 		case 0x1: // mnemonic":"LD","operands":["BC","d16"],"bytes":3,"cycles":12,"flagsZNHC":["-","-","-","-"]}
-			C = membus.readROM(PC++);
-			B = membus.readROM(PC++);
+			C = membus.readROM(++PC);
+			B = membus.readROM(++PC);
 			break;
 		case 0x2: // mnemonic":"LD","operands":["(BC)","A"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x3: // mnemonic":"INC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x4: // mnemonic":"INC","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
-			B++;
-			subtract = false;
-			if (B == 0x0100) {
-				zero = true;
-				B = 0x0000;
-			} else if ((B & 0xf) == 0x0) {
-				halfcarry = true;
-			}
+			B = add(B, 1);
 			break;
 		case 0x5: // mnemonic":"DEC","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
-			if (B == 0x0000) {
-				zero = true;
-				B = 0x0000;
-			} else if ((B & 0xf) == 0x0) {
-				halfcarry = true;
-			}
+			B = sub(B, 1);
 			break;
 		case 0x6: // mnemonic":"LD","operands":["B","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			B = membus.readROM(PC++);
+			B = membus.readROM(++PC);
 			break;
 		case 0x7: // mnemonic":"RLCA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
 		case 0x8: // mnemonic":"LD","operands":["(a16)","SP"],"bytes":3,"cycles":20,"flagsZNHC":["-","-","-","-"]}
-			SP = membus.readROM(PC++);
-			SP = SP + (membus.readROM(PC++) << 4);
+			SP = membus.readROM(++PC);
+			SP = SP + (membus.readROM(++PC) << 8);
 			break;
 		case 0x9: // mnemonic":"ADD","operands":["HL","BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
 		case 0xa: // mnemonic":"LD","operands":["A","(BC)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
@@ -89,30 +81,32 @@ public class CPU {
 			break;
 		case 0xb: // mnemonic":"DEC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0xc: // mnemonic":"INC","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
-			C++;
+			C = add(C, 1);
 			break;
 		case 0xd: // mnemonic":"DEC","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
-			C--;
+			C = sub(C, 1);
 			break;
 		case 0xe: // mnemonic":"LD","operands":["C","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			C = membus.readROM(PC++);
+			C = membus.readROM(++PC);
 			break;
 		case 0xf: // mnemonic":"RRCA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
 		case 0x10: // mnemonic":"STOP","operands":["0"],"bytes":2,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 		case 0x11: // mnemonic":"LD","operands":["DE","d16"],"bytes":3,"cycles":12,"flagsZNHC":["-","-","-","-"]}
-			E = membus.readROM(PC++);
-			D = membus.readROM(PC++);
+			E = membus.readROM(++PC);
+			D = membus.readROM(++PC);
 			break;
 		case 0x12: // mnemonic":"LD","operands":["(DE)","A"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x13: // mnemonic":"INC","operands":["DE"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x14: // mnemonic":"INC","operands":["D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
+			D = add(D, 1);
 		case 0x15: // mnemonic":"DEC","operands":["D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
+			D = sub(D, 1);
 		case 0x16: // mnemonic":"LD","operands":["D","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			D = membus.readROM(PC++);
+			D = membus.readROM(++PC);
 			break;
 		case 0x17: // mnemonic":"RLA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
 		case 0x18: // mnemonic":"JR","operands":["r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]} - relative jump, bit7 as sign
-			data = membus.readROM(PC++);
+			data = membus.readROM(++PC);
 			PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			break;
 		case 0x19: // mnemonic":"ADD","operands":["HL","DE"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
@@ -122,55 +116,60 @@ public class CPU {
 			break;
 		case 0x1b: // mnemonic":"DEC","operands":["DE"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x1c: // mnemonic":"INC","operands":["E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
+			E = add(E, 1);
 		case 0x1d: // mnemonic":"DEC","operands":["E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
+			E = sub(E, 1);
 		case 0x1e: // mnemonic":"LD","operands":["E","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			E = membus.readROM(PC++);
+			E = membus.readROM(++PC);
 			break;
 		case 0x1f: // mnemonic":"RRA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
 		case 0x20: // mnemonic":"JR","operands":["NZ","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readROM(PC + 1);
-			if(!zero) {
+			if((flagRegister & zero) == 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			}else {
-				PC++;
+				++PC;
 			}
 			break;
 		case 0x21: // mnemonic":"LD","operands":["HL","d16"],"bytes":3,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 		case 0x22: // mnemonic":"LD","operands":["(HL+)","A"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x23: // mnemonic":"INC","operands":["HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x24: // mnemonic":"INC","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
+			H = add(H, 1);
 		case 0x25: // mnemonic":"DEC","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
+			H = sub(H, 1);
 		case 0x26: // mnemonic":"LD","operands":["H","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			H = membus.readROM(PC++);
+			H = membus.readROM(++PC);
 			break;
 		case 0x27: // mnemonic":"DAA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["Z","-","0","C"]}
 		case 0x28: // mnemonic":"JR","operands":["Z","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readROM(PC + 1);
-			if(zero) {
+			if((flagRegister & zero) != 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			}else {
-				PC++;
+				++PC;
 			}
 			break;
 		case 0x29: // mnemonic":"ADD","operands":["HL","HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
 		case 0x2a: // mnemonic":"LD","operands":["A","(HL+)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x2b: // mnemonic":"DEC","operands":["HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x2c: // mnemonic":"INC","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
+			L = add(L, 1);
 		case 0x2d: // mnemonic":"DEC","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
+			L = sub(L, 1);
 		case 0x2e: // mnemonic":"LD","operands":["L","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			L = membus.readROM(PC++);
+			L = membus.readROM(++PC);
 			break;
 		case 0x2f: // mnemonic":"CPL","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","1","1","-"]}
 			A = (~A) & 0xff;
-			subtract = true;
-			halfcarry = true;
+			flagRegister &= subtract | halfcarry;
 			break;
 		case 0x30: // mnemonic":"JR","operands":["NC","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readROM(PC + 1);
-			if(!carry) {
+			if((flagRegister & zero) == 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			}else {
-				PC++;
+				++PC;
 			}
 			break;
 		case 0x31: // mnemonic":"LD","operands":["SP","d16"],"bytes":3,"cycles":12,"flagsZNHC":["-","-","-","-"]}
@@ -180,32 +179,29 @@ public class CPU {
 		case 0x35: // mnemonic":"DEC","operands":["(HL)"],"bytes":1,"cycles":12,"flagsZNHC":["Z","1","H","-"]}
 		case 0x36: // mnemonic":"LD","operands":["(HL)","d8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 		case 0x37: // mnemonic":"SCF","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","0","0","1"]}
-			subtract = false;
-			halfcarry = false;
-			carry = true;
+			flagRegister &= ~subtract | ~halfcarry;
+			flagRegister |= carry;
 		case 0x38: // mnemonic":"JR","operands":["C","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readROM(PC + 1);
-			if(carry) {
+			if((flagRegister & carry) != 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			}else {
-				PC++;
+				++PC;
 			}
 			break;
 		case 0x39: // mnemonic":"ADD","operands":["HL","SP"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
 		case 0x3a: // mnemonic":"LD","operands":["A","(HL-)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x3b: // mnemonic":"DEC","operands":["SP"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x3c: // mnemonic":"INC","operands":["A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
+			A = add(A, 1);
 		case 0x3d: // mnemonic":"DEC","operands":["A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
+			A = sub(A, 1);
 		case 0x3e: // mnemonic":"LD","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			A = membus.readROM(PC++);
+			A = membus.readROM(++PC);
 			break;
 		case 0x3f: // mnemonic":"CCF","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","0","0","C"]}
-			subtract = false;
-			halfcarry = false;
-			if (carry)
-				carry = false;
-			else
-				carry = true;
+			flagRegister &= ~subtract | ~halfcarry;
+			flagRegister ^= carry;
 		case 0x40: // mnemonic":"LD","operands":["B","B"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 //			B = B;
 			break;
@@ -399,96 +395,26 @@ public class CPU {
 			// A = A;
 			break;
 		case 0x80: // mnemonic":"ADD","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + B;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, B); 
 			break;
 		case 0x81: // mnemonic":"ADD","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + C;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, C); 
 			break;
 		case 0x82: // mnemonic":"ADD","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + D;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, D); 
 			break;
 		case 0x83: // mnemonic":"ADD","operands":["A","E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + E;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, E); 
 			break;
 		case 0x84: // mnemonic":"ADD","operands":["A","H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + H;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, H); 
 			break;
 		case 0x85: // mnemonic":"ADD","operands":["A","L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + L;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, L); 
 			break;
 		case 0x86: // mnemonic":"ADD","operands":["A","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0x87: // mnemonic":"ADD","operands":["A","A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			temp = A + A;
-			if(temp > 0xff) {
-				carry = true;
-			}else {
-				carry = false;
-			}if((temp & 0xf0) != (A & 0xf0)) {
-				halfcarry = true;
-			}
-			A = temp;
-			A = A & 0xff;
-			subtract = false;
+			A = add(A, A); 
 			break;
 		case 0x88: // mnemonic":"ADC","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 		case 0x89: // mnemonic":"ADC","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
@@ -554,62 +480,59 @@ public class CPU {
 			SP++;
 			break;
 		case 0xc2: // mnemonic":"JP","operands":["NZ","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if(!zero) {
-				PC = membus.readROM(PC++);
-				PC = PC + (membus.readROM(PC++) << 4);
+			if((flagRegister & zero) == 0) {
+				PC = (membus.readROM(++PC) << 8) + (membus.readROM(++PC));
 			}else {
-				PC++;
-				PC++;
+				++PC;
+				++PC;
 			}
 			break;
 		case 0xc3: // mnemonic":"JP","operands":["a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			PC = membus.readROM(PC++);
-			PC = PC + (membus.readROM(PC++) << 4);
+			PC = (membus.readROM(++PC) << 8) + (membus.readROM(++PC));
 			break;
 		case 0xc4: // mnemonic":"CALL","operands":["NZ","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if(!zero) {
+			if((flagRegister & zero) == 0) {
 				SP--;
 				membus.writeRAM(SP, (PC & 0xff));
 				SP--;
 				membus.writeRAM(SP, ((PC >> 4) & 0xff));
-				PC = membus.readROM(PC++);
+				PC = membus.readROM(++PC);
 			}
 		case 0xc5: // mnemonic":"PUSH","operands":["BC"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			SP--;
 			membus.writeRAM(SP, (C & 0xff));
 			SP--;
 			membus.writeRAM(SP, (B & 0xff));
-			PC = membus.readROM(PC++);
+			PC = membus.readROM(++PC);
 		case 0xc6: // mnemonic":"ADD","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0xc7: // mnemonic":"RST","operands":["00H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xc8: // mnemonic":"RET","operands":["Z"],"bytes":1,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 		case 0xc9: // mnemonic":"RET","operands":[],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			
 		case 0xca: // mnemonic":"JP","operands":["Z","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if(zero) {
-				PC = membus.readROM(PC++);
-				PC = PC + (membus.readROM(PC++) << 4);
+			if((flagRegister & zero) != 0) {
+				PC = (membus.readROM(++PC) << 8) + (membus.readROM(++PC));
 			}else {
-				PC++;
-				PC++;
+				++PC;
+				++PC;
 			}
 			break;
 		case 0xcb: // mnemonic":"PREFIX","operands":["CB"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 		case 0xcc: // mnemonic":"CALL","operands":["Z","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if(zero) {
+			if((flagRegister & zero) != 0) {
 				SP--;
 				membus.writeRAM(SP, (PC & 0xff));
 				SP--;
-				membus.writeRAM(SP, ((PC >> 4) & 0xff));
-				PC = membus.readROM(PC++);
+				membus.writeRAM(SP, ((PC >> 8) & 0xff));
+				PC = membus.readROM(++PC);
 			}
 			break;
 		case 0xcd: // mnemonic":"CALL","operands":["a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
 			SP--;
 			membus.writeRAM(SP, (PC & 0xff));
 			SP--;
-			membus.writeRAM(SP, ((PC >> 4) & 0xff));
-			PC = membus.readROM(PC++);
+			membus.writeRAM(SP, ((PC >> 8) & 0xff));
+			PC = membus.readROM(++PC);
 			break;
 		case 0xce: // mnemonic":"ADC","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0xcf: // mnemonic":"RST","operands":["08H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
@@ -621,21 +544,20 @@ public class CPU {
 			SP++;
 			break;
 		case 0xd2: // mnemonic":"JP","operands":["NC","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if(!carry) {
-				PC = membus.readROM(PC++);
-				PC = PC + (membus.readROM(PC++) << 4);
+			if((flagRegister & carry) == 0) {
+				PC = (membus.readROM(++PC) << 8) + (membus.readROM(++PC));
 			}else {
-				PC++;
-				PC++;
+				++PC;
+				++PC;
 			}
 			break;
 		case 0xd4: // mnemonic":"CALL","operands":["NC","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if(!carry) {
+			if((flagRegister & carry) == 0) {
 				SP--;
 				membus.writeRAM(SP, (PC & 0xff));
 				SP--;
-				membus.writeRAM(SP, ((PC >> 4) & 0xff));
-				PC = membus.readROM(PC++);
+				membus.writeRAM(SP, ((PC >> 8) & 0xff));
+				PC = membus.readROM(++PC);
 			}
 			break;
 		case 0xd5: // mnemonic":"PUSH","operands":["DE"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
@@ -643,27 +565,26 @@ public class CPU {
 			membus.writeRAM(SP, (E & 0xff));
 			SP--;
 			membus.writeRAM(SP, (D & 0xff));
-			PC = membus.readROM(PC++);
+			PC = membus.readROM(++PC);
 		case 0xd6: // mnemonic":"SUB","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
 		case 0xd7: // mnemonic":"RST","operands":["10H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xd8: // mnemonic":"RET","operands":["C"],"bytes":1,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 		case 0xd9: // mnemonic":"RETI","operands":[],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xda: // mnemonic":"JP","operands":["C","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if(carry) {
-				PC = membus.readROM(PC++);
-				PC = PC + (membus.readROM(PC++) << 4);
+			if((flagRegister & carry) != 0) {
+				PC = (membus.readROM(++PC) << 8) + (membus.readROM(++PC));
 			}else {
-				PC++;
-				PC++;
+				++PC;
+				++PC;
 			}
 			break;
 		case 0xdc: // mnemonic":"CALL","operands":["C","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if(carry) {
+			if((flagRegister & carry) != 0) {
 				SP--;
 				membus.writeRAM(SP, (PC & 0xff));
 				SP--;
-				membus.writeRAM(SP, ((PC >> 4) & 0xff));
-				PC = membus.readROM(PC++);
+				membus.writeRAM(SP, ((PC >> 8) & 0xff));
+				PC = membus.readROM(++PC);
 			}
 			break;
 		case 0xde: // mnemonic":"SBC","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
@@ -681,12 +602,12 @@ public class CPU {
 			membus.writeRAM(SP, (L & 0xff));
 			SP--;
 			membus.writeRAM(SP, (H & 0xff));
-			PC = membus.readROM(PC++);
+			PC = membus.readROM(++PC);
 		case 0xe6: // mnemonic":"AND","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","1","0"]}
 		case 0xe7: // mnemonic":"RST","operands":["20H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xe8: // mnemonic":"ADD","operands":["SP","r8"],"bytes":2,"cycles":16,"flagsZNHC":["0","0","H","C"]}
 		case 0xe9: // mnemonic":"JP","operands":["(HL)"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
-			PC = (H << 4) + L;
+			PC = (H << 8) + L;
 			break;
 		case 0xea: // mnemonic":"LD","operands":["(a16)","A"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xee: // mnemonic":"XOR","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","0","0"]}
@@ -705,20 +626,56 @@ public class CPU {
 			membus.writeRAM(SP, (F & 0xff));
 			SP--;
 			membus.writeRAM(SP, (A & 0xff));
-			PC = membus.readROM(PC++);
+			PC = membus.readROM(++PC);
 		case 0xf6: // mnemonic":"OR","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","0","0"]}
 		case 0xf7: // mnemonic":"RST","operands":["30H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xf8: // mnemonic":"LD","operands":["HL","SP+r8"],"bytes":2,"cycles":12,"flagsZNHC":["0","0","H","C"]}
 		case 0xf9: // mnemonic":"LD","operands":["SP","HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0xfa: // mnemonic":"LD","operands":["A","(a16)"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			F = membus.readROM(PC++);
-			A = membus.readROM(PC++);
+			F = membus.readROM(++PC);
+			A = membus.readROM(++PC);
 			break;
 		case 0xfb: // mnemonic":"EI","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 		case 0xfe: // mnemonic":"CP","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
 		case 0xff: // mnemonic":"RST","operands":["38H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		}
 	}
+	
+	private int add(int prm1, int prm2) {
+		int ret;
+		flagRegister |= (((prm1 & 0xf0) + (prm2 & 0xf0)) & 0x10) & halfcarry;
+		flagRegister |= ((prm1 + prm2) & 0xff) != 0 ? carry : ~carry;
+		ret = (prm1 + prm2) & 0xff;
+		flagRegister |= ~subtract;
+		flagRegister |= ret == 0 ? zero : ~zero; 
+		return ret;
+	}
+	
+//	private int addc(int prm1, int prm2) {
+//		int ret;
+//		flagRegister |= (((prm1 & 0xf0) + (prm2 & 0xf0)) & 0x10) & halfcarry;
+//		flagRegister |= ((prm1 + prm2) & 0xff) != 0 ? carry : ~carry;
+//		ret = (prm1 + prm2) & 0xff;
+//		flagRegister |= ~subtract;
+//		flagRegister |= ret == 0 ? zero : ~zero;
+//		return ret;
+//	}
+	
+	private int sub(int prm1, int prm2) {
+		int ret;
+		flagRegister |= (((prm1 & 0xf0) - (prm2 & 0xf0)) & 0x10) & halfcarry;
+		flagRegister |= ((prm1 - prm2) & 0xff) != 0 ? carry : ~carry;
+		ret = (prm1 - prm2) & 0xff;
+		
+		flagRegister |= subtract;
+		flagRegister |= ret == 0 ? zero : ~zero; 
+		return ret;
+	}
+	
+	public void start() {
+		clock.start();
+	}
+	
 
 	private class Clock implements Runnable {
 
@@ -734,7 +691,7 @@ public class CPU {
 		}
 
 		public void start() {
-			double delay = (1.0 / clockspeed * 100);
+			double delay = (1.0 / clockspeed) * 1000 * 1000 * 1000;
 			executorService.scheduleAtFixedRate(this, 0, (int) delay, TimeUnit.NANOSECONDS);
 		}
 
