@@ -93,8 +93,7 @@ public class CPU {
 			break;
 		case 0x9: // mnemonic":"ADD","operands":["HL","BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
 		case 0xa: // mnemonic":"LD","operands":["A","(BC)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			A = B;
-			F = C;
+			A = membus.readMem((B << 8) + C);
 			break;
 		case 0xb: // mnemonic":"DEC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 
