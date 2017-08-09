@@ -9,23 +9,30 @@ public class CPU {
 	private Clock clock;
 
 	private int A, B, C, D, E, F, H, L, SP, PC;
-	
+
 	private int flagRegister = 0x00;
-	
-	private int zero = 0x70;
-	
-	private int subtract = 0x60;
-	
-	private int halfcarry = 0x50;
-	
-	private int carry = 0x40;
+
+	private int zero = 0x80;
+
+	private int subtract = 0x40;
+
+	private int halfcarry = 0x20;
+
+	private int carry = 0x10;
+
+	private int jump = 0x01;
 
 	private boolean halt;
 
 	private MemoryBus membus;
 
 	private void tick() {
-		
+		flagRegister &= 0xff;
+//		System.out.println("Flags: " + Integer.toBinaryString(flagRegister));
+		if ((flagRegister & jump) == 0)
+			PC++;
+		else
+			flagRegister &= ~jump;
 		PC = PC & 0xffff;
 		int command = membus.readMem(PC);
 		parseCommand(command);
@@ -50,9 +57,9 @@ public class CPU {
 	}
 
 	private void parseCommand(int command) {
-		System.out.println(Integer.toHexString(command));
+//		System.out.println(Integer.toHexString(command));
 		int data;
-		
+
 		switch (command) {
 		case 0x0: // mnemonic":"NOP","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			break;
@@ -64,7 +71,8 @@ public class CPU {
 			membus.writeMem((B << 8) | C, A);
 		case 0x3: // mnemonic":"INC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 			C++;
-			if(C == 0x00) B++;
+			if (C == 0x00)
+				B++;
 		case 0x4: // mnemonic":"INC","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
 			B = add(B, 1);
 			break;
@@ -79,7 +87,7 @@ public class CPU {
 			A = ((A << 1) & 0xff) | (A >> 7);
 			flagRegister &= ~subtract;
 			flagRegister &= ~halfcarry;
-//			flagRegister &= 
+			// flagRegister &=
 		case 0x8: // mnemonic":"LD","operands":["(a16)","SP"],"bytes":3,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 			SP = membus.readMem(++PC) + (membus.readMem(++PC) << 8);
 			break;
@@ -89,6 +97,8 @@ public class CPU {
 			F = C;
 			break;
 		case 0xb: // mnemonic":"DEC","operands":["BC"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
+
+			break;
 		case 0xc: // mnemonic":"INC","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
 			C = add(C, 1);
 			break;
@@ -115,7 +125,8 @@ public class CPU {
 			D = membus.readMem(++PC);
 			break;
 		case 0x17: // mnemonic":"RLA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
-		case 0x18: // mnemonic":"JR","operands":["r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]} - relative jump, bit7 as sign
+		case 0x18: // mnemonic":"JR","operands":["r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
+					// - relative jump, bit7 as sign
 			data = membus.readMem(++PC);
 			PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
 			break;
@@ -135,9 +146,9 @@ public class CPU {
 		case 0x1f: // mnemonic":"RRA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["0","0","0","C"]}
 		case 0x20: // mnemonic":"JR","operands":["NZ","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readMem(PC + 1);
-			if((flagRegister & zero) == 0) {
+			if ((flagRegister & zero) == 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
-			}else {
+			} else {
 				++PC;
 			}
 			break;
@@ -146,17 +157,19 @@ public class CPU {
 		case 0x23: // mnemonic":"INC","operands":["HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x24: // mnemonic":"INC","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
 			H = add(H, 1);
+			break;
 		case 0x25: // mnemonic":"DEC","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
 			H = sub(H, 1);
+			break;
 		case 0x26: // mnemonic":"LD","operands":["H","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 			H = membus.readMem(++PC);
 			break;
 		case 0x27: // mnemonic":"DAA","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["Z","-","0","C"]}
 		case 0x28: // mnemonic":"JR","operands":["Z","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readMem(PC + 1);
-			if((flagRegister & zero) != 0) {
+			if ((flagRegister & zero) != 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
-			}else {
+			} else {
 				++PC;
 			}
 			break;
@@ -165,22 +178,25 @@ public class CPU {
 		case 0x2b: // mnemonic":"DEC","operands":["HL"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 		case 0x2c: // mnemonic":"INC","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","-"]}
 			L = add(L, 1);
+			break;
 		case 0x2d: // mnemonic":"DEC","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","-"]}
 			L = sub(L, 1);
+			break;
 		case 0x2e: // mnemonic":"LD","operands":["L","d8"],"bytes":2,"cycles":8,"flagsZNHC":["-","-","-","-"]}
 			L = membus.readMem(++PC);
 			break;
 		case 0x2f: // mnemonic":"CPL","operands":[],"bytes":1,"cycles":4,"flagsZNHC":["-","1","1","-"]}
 			A = (~A) & 0xff;
-			flagRegister &= subtract | halfcarry;
+			flagRegister |= subtract | halfcarry;
 			break;
 		case 0x30: // mnemonic":"JR","operands":["NC","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readMem(PC + 1);
-			if((flagRegister & zero) == 0) {
+			if ((flagRegister & zero) == 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
-			}else {
+			} else {
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0x31: // mnemonic":"LD","operands":["SP","d16"],"bytes":3,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			SP = ((membus.readMem(++PC) << 8) + (membus.readMem(++PC)));
@@ -194,11 +210,12 @@ public class CPU {
 			flagRegister |= carry;
 		case 0x38: // mnemonic":"JR","operands":["C","r8"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
 			data = membus.readMem(PC + 1);
-			if((flagRegister & carry) != 0) {
+			if ((flagRegister & carry) != 0) {
 				PC = ((data & 0x80) == 1) ? PC - (data & 0xef) : PC + (data & 0xef);
-			}else {
+			} else {
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0x39: // mnemonic":"ADD","operands":["HL","SP"],"bytes":1,"cycles":8,"flagsZNHC":["-","0","H","C"]}
 		case 0x3a: // mnemonic":"LD","operands":["A","(HL-)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
@@ -214,7 +231,7 @@ public class CPU {
 			flagRegister &= ~subtract | ~halfcarry;
 			flagRegister ^= carry;
 		case 0x40: // mnemonic":"LD","operands":["B","B"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
-//			B = B;
+			// B = B;
 			break;
 		case 0x41: // mnemonic":"LD","operands":["B","C"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			B = C;
@@ -232,7 +249,7 @@ public class CPU {
 			B = L;
 			break;
 		case 0x46: // mnemonic":"LD","operands":["B","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["-","-","-","-"]}
-			 B = membus.readMem((H << 8) | L);
+			B = membus.readMem((H << 8) | L);
 			break;
 		case 0x47: // mnemonic":"LD","operands":["B","A"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			B = A;
@@ -241,7 +258,7 @@ public class CPU {
 			C = B;
 			break;
 		case 0x49: // mnemonic":"LD","operands":["C","C"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
-//			C = C;
+			// C = C;
 			break;
 		case 0x4a: // mnemonic":"LD","operands":["C","D"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			C = D;
@@ -405,78 +422,125 @@ public class CPU {
 			// A = A;
 			break;
 		case 0x80: // mnemonic":"ADD","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, B); 
+			A = add(A, B);
 			break;
 		case 0x81: // mnemonic":"ADD","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, C); 
+			A = add(A, C);
 			break;
 		case 0x82: // mnemonic":"ADD","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, D); 
+			A = add(A, D);
 			break;
 		case 0x83: // mnemonic":"ADD","operands":["A","E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, E); 
+			A = add(A, E);
 			break;
 		case 0x84: // mnemonic":"ADD","operands":["A","H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, H); 
+			A = add(A, H);
 			break;
 		case 0x85: // mnemonic":"ADD","operands":["A","L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, L); 
+			A = add(A, L);
 			break;
 		case 0x86: // mnemonic":"ADD","operands":["A","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, membus.readMem((H << 8) | L));
 			break;
 		case 0x87: // mnemonic":"ADD","operands":["A","A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A, A); 
+			A = add(A, A);
 			break;
 		case 0x88: // mnemonic":"ADC","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, B);
+			break;
 		case 0x89: // mnemonic":"ADC","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, C);
+			break;
 		case 0x8a: // mnemonic":"ADC","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, D);
+			break;
 		case 0x8b: // mnemonic":"ADC","operands":["A","E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, E);
+			break;
 		case 0x8c: // mnemonic":"ADC","operands":["A","H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, H);
+			break;
 		case 0x8d: // mnemonic":"ADC","operands":["A","L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, L);
+			break;
 		case 0x8e: // mnemonic":"ADC","operands":["A","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
-			A = add(A,  membus.readMem((H << 8) | L));
+			A = add(A, membus.readMem((H << 8) | L));
+			break;
 		case 0x8f: // mnemonic":"ADC","operands":["A","A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","H","C"]}
 			A = add(A, A);
+			break;
 		case 0x90: // mnemonic":"SUB","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, B);
+			break;
 		case 0x91: // mnemonic":"SUB","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, C);
+			break;
 		case 0x92: // mnemonic":"SUB","operands":["D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, D);
+			break;
 		case 0x93: // mnemonic":"SUB","operands":["E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, E);
+			break;
 		case 0x94: // mnemonic":"SUB","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, H);
+			break;
 		case 0x95: // mnemonic":"SUB","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, L);
+			break;
 		case 0x96: // mnemonic":"SUB","operands":["(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, membus.readMem((H << 8) | L));
+			break;
 		case 0x97: // mnemonic":"SUB","operands":["A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
 			A = sub(A, A);
+			break;
 		case 0x98: // mnemonic":"SBC","operands":["A","B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, B);
+			break;
 		case 0x99: // mnemonic":"SBC","operands":["A","C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, C);
+			break;
 		case 0x9a: // mnemonic":"SBC","operands":["A","D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, D);
+			break;
 		case 0x9b: // mnemonic":"SBC","operands":["A","E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, E);
+			break;
 		case 0x9c: // mnemonic":"SBC","operands":["A","H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, H);
+			break;
 		case 0x9d: // mnemonic":"SBC","operands":["A","L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, L);
+			break;
 		case 0x9e: // mnemonic":"SBC","operands":["A","(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, membus.readMem((H << 8) | L));
+			break;
 		case 0x9f: // mnemonic":"SBC","operands":["A","A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","1","H","C"]}
+			A = sbc(A, A);
+			break;
 		case 0xa0: // mnemonic":"AND","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
-			A = A & B;
+			A = and(A, B);
+			break;
 		case 0xa1: // mnemonic":"AND","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, C);
+			break;
 		case 0xa2: // mnemonic":"AND","operands":["D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, D);
+			break;
 		case 0xa3: // mnemonic":"AND","operands":["E"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, E);
+			break;
 		case 0xa4: // mnemonic":"AND","operands":["H"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, H);
+			break;
 		case 0xa5: // mnemonic":"AND","operands":["L"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, L);
+			break;
 		case 0xa6: // mnemonic":"AND","operands":["(HL)"],"bytes":1,"cycles":8,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, membus.readMem((H << 8) | L));
+			break;
 		case 0xa7: // mnemonic":"AND","operands":["A"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","1","0"]}
+			A = and(A, A);
+			break;
 		case 0xa8: // mnemonic":"XOR","operands":["B"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","0","0"]}
 		case 0xa9: // mnemonic":"XOR","operands":["C"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","0","0"]}
 		case 0xaa: // mnemonic":"XOR","operands":["D"],"bytes":1,"cycles":4,"flagsZNHC":["Z","0","0","0"]}
@@ -509,52 +573,59 @@ public class CPU {
 			SP++;
 			break;
 		case 0xc2: // mnemonic":"JP","operands":["NZ","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & zero) == 0) {
+			if ((flagRegister & zero) == 0) {
 				PC = (membus.readMem(++PC) << 8) + (membus.readMem(++PC));
-			}else {
+			} else {
 				++PC;
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0xc3: // mnemonic":"JP","operands":["a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			PC = (membus.readMem(++PC) << 8) + (membus.readMem(++PC));
+			flagRegister |= jump;
 			break;
 		case 0xc4: // mnemonic":"CALL","operands":["NZ","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & zero) == 0) {
+			if ((flagRegister & zero) == 0) {
 				SP--;
 				membus.writeMem(SP, (PC & 0xff));
 				SP--;
 				membus.writeMem(SP, ((PC >> 4) & 0xff));
 				PC = membus.readMem(++PC);
 			}
+			flagRegister |= jump;
+			break;
 		case 0xc5: // mnemonic":"PUSH","operands":["BC"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			SP--;
 			membus.writeMem(SP, (C & 0xff));
 			SP--;
 			membus.writeMem(SP, (B & 0xff));
 			PC = membus.readMem(++PC);
+			break;
 		case 0xc6: // mnemonic":"ADD","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0xc7: // mnemonic":"RST","operands":["00H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xc8: // mnemonic":"RET","operands":["Z"],"bytes":1,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 		case 0xc9: // mnemonic":"RET","operands":[],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			
+
 		case 0xca: // mnemonic":"JP","operands":["Z","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & zero) != 0) {
+			if ((flagRegister & zero) != 0) {
 				PC = (membus.readMem(++PC) << 8) + (membus.readMem(++PC));
-			}else {
+			} else {
 				++PC;
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0xcb: // mnemonic":"PREFIX","operands":["CB"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 		case 0xcc: // mnemonic":"CALL","operands":["Z","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & zero) != 0) {
+			if ((flagRegister & zero) != 0) {
 				SP--;
 				membus.writeMem(SP, (PC & 0xff));
 				SP--;
 				membus.writeMem(SP, ((PC >> 8) & 0xff));
 				PC = membus.readMem(++PC);
 			}
+			flagRegister |= jump;
 			break;
 		case 0xcd: // mnemonic":"CALL","operands":["a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
 			SP--;
@@ -562,6 +633,7 @@ public class CPU {
 			SP--;
 			membus.writeMem(SP, ((PC >> 8) & 0xff));
 			PC = membus.readMem(++PC);
+			flagRegister |= jump;
 			break;
 		case 0xce: // mnemonic":"ADC","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","H","C"]}
 		case 0xcf: // mnemonic":"RST","operands":["08H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
@@ -573,21 +645,23 @@ public class CPU {
 			SP++;
 			break;
 		case 0xd2: // mnemonic":"JP","operands":["NC","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & carry) == 0) {
+			if ((flagRegister & carry) == 0) {
 				PC = (membus.readMem(++PC) << 8) + (membus.readMem(++PC));
-			}else {
+			} else {
 				++PC;
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0xd4: // mnemonic":"CALL","operands":["NC","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & carry) == 0) {
+			if ((flagRegister & carry) == 0) {
 				SP--;
 				membus.writeMem(SP, (PC & 0xff));
 				SP--;
 				membus.writeMem(SP, ((PC >> 8) & 0xff));
 				PC = membus.readMem(++PC);
 			}
+			flagRegister |= jump;
 			break;
 		case 0xd5: // mnemonic":"PUSH","operands":["DE"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			SP--;
@@ -595,26 +669,29 @@ public class CPU {
 			SP--;
 			membus.writeMem(SP, (D & 0xff));
 			PC = membus.readMem(++PC);
+			break;
 		case 0xd6: // mnemonic":"SUB","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
 		case 0xd7: // mnemonic":"RST","operands":["10H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xd8: // mnemonic":"RET","operands":["C"],"bytes":1,"cycles":20,"flagsZNHC":["-","-","-","-"]}
 		case 0xd9: // mnemonic":"RETI","operands":[],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xda: // mnemonic":"JP","operands":["C","a16"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & carry) != 0) {
+			if ((flagRegister & carry) != 0) {
 				PC = (membus.readMem(++PC) << 8) + (membus.readMem(++PC));
-			}else {
+			} else {
 				++PC;
 				++PC;
 			}
+			flagRegister |= jump;
 			break;
 		case 0xdc: // mnemonic":"CALL","operands":["C","a16"],"bytes":3,"cycles":24,"flagsZNHC":["-","-","-","-"]}
-			if((flagRegister & carry) != 0) {
+			if ((flagRegister & carry) != 0) {
 				SP--;
 				membus.writeMem(SP, (PC & 0xff));
 				SP--;
 				membus.writeMem(SP, ((PC >> 8) & 0xff));
 				PC = membus.readMem(++PC);
 			}
+			flagRegister |= jump;
 			break;
 		case 0xde: // mnemonic":"SBC","operands":["A","d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","1","H","C"]}
 		case 0xdf: // mnemonic":"RST","operands":["18H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
@@ -632,14 +709,17 @@ public class CPU {
 			SP--;
 			membus.writeMem(SP, (H & 0xff));
 			PC = membus.readMem(++PC);
+			break;
 		case 0xe6: // mnemonic":"AND","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","1","0"]}
 		case 0xe7: // mnemonic":"RST","operands":["20H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xe8: // mnemonic":"ADD","operands":["SP","r8"],"bytes":2,"cycles":16,"flagsZNHC":["0","0","H","C"]}
 		case 0xe9: // mnemonic":"JP","operands":["(HL)"],"bytes":1,"cycles":4,"flagsZNHC":["-","-","-","-"]}
 			PC = (H << 8) + L;
+			flagRegister |= jump;
 			break;
 		case 0xea: // mnemonic":"LD","operands":["(a16)","A"],"bytes":3,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 			membus.writeMem((membus.readMem(++PC) << 8) | membus.readMem(++PC), A);
+			break;
 		case 0xee: // mnemonic":"XOR","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","0","0"]}
 		case 0xef: // mnemonic":"RST","operands":["28H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xf0: // mnemonic":"LDH","operands":["A","(a8)"],"bytes":2,"cycles":12,"flagsZNHC":["-","-","-","-"]}
@@ -657,6 +737,7 @@ public class CPU {
 			SP--;
 			membus.writeMem(SP, (A & 0xff));
 			PC = membus.readMem(++PC);
+			break;
 		case 0xf6: // mnemonic":"OR","operands":["d8"],"bytes":2,"cycles":8,"flagsZNHC":["Z","0","0","0"]}
 		case 0xf7: // mnemonic":"RST","operands":["30H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		case 0xf8: // mnemonic":"LD","operands":["HL","SP+r8"],"bytes":2,"cycles":12,"flagsZNHC":["0","0","H","C"]}
@@ -670,43 +751,89 @@ public class CPU {
 		case 0xff: // mnemonic":"RST","operands":["38H"],"bytes":1,"cycles":16,"flagsZNHC":["-","-","-","-"]}
 		}
 	}
-	
+
 	private int add(int prm1, int prm2) {
 		int ret;
 		flagRegister |= (((prm1 & 0xf0) + (prm2 & 0xf0)) & 0x10) & halfcarry;
-		flagRegister |= ((prm1 + prm2) & 0xff) != 0 ? carry : ~carry;
+		if (((prm1 + prm2) & 0xff00) != 0)
+			flagRegister |= carry;
+		else
+			flagRegister &= ~carry;
 		ret = (prm1 + prm2) & 0xff;
-		flagRegister |= ~subtract;
-		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
+		flagRegister &= ~subtract;
+		if (ret == 0)
+			flagRegister |= zero;
+		else
+			flagRegister &= ~zero;
 		return ret;
+
 	}
-	
+
 	private int addc(int prm1, int prm2) {
 		int ret;
 		int cry = (flagRegister & carry) == 0 ? 0 : 1;
 		flagRegister |= (((prm1 & 0xf0) + ((prm2 + cry) & 0xf0)) & 0x10) & halfcarry;
-		flagRegister |= ((prm1 + prm2 + cry) & 0xff) != 0 ? carry : ~carry;
+		if (((prm1 + prm2) & 0xff00) != 0)
+			flagRegister |= carry;
+		else
+			flagRegister &= ~carry;
 		ret = (prm1 + prm2 + cry) & 0xff;
-		flagRegister |= ~subtract;
-		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
+		flagRegister &= ~subtract;
+		if (ret == 0)
+			flagRegister |= zero;
+		else
+			flagRegister &= ~zero;
 		return ret;
 	}
-	
+
 	private int sub(int prm1, int prm2) {
 		int ret;
 		flagRegister |= (((prm1 & 0xf0) - (prm2 & 0xf0)) & 0x10) & halfcarry;
-		flagRegister |= ((prm1 - prm2) & 0xff) != 0 ? carry : ~carry;
+		if (((prm1 - prm2) & 0xff) != 0)
+			flagRegister |= carry;
+		else
+			flagRegister &= ~carry;
 		ret = (prm1 - prm2) & 0xff;
-		
+
 		flagRegister |= subtract;
-		flagRegister |= ret == 0 ? zero : ~zero; //nemjo
+		if (ret == 0)
+			flagRegister |= zero;
+		else
+			flagRegister &= ~zero;
+		return ret;
+	}
+
+	private int sbc(int prm1, int prm2) {
+		int ret;
+		int cry = (flagRegister & carry) == 0 ? 0 : 1;
+		flagRegister |= (((prm1 & 0xf0) - ((prm2 + cry) & 0xf0)) & 0x10) & halfcarry;
+		if (((prm1 - (prm2 + cry)) & 0xff) != 0)
+			flagRegister |= carry;
+		else
+			flagRegister &= ~carry;
+		ret = (prm1 - (prm2 + cry)) & 0xff;
+
+		flagRegister |= subtract;
+		if (ret == 0)
+			flagRegister |= zero;
+		else
+			flagRegister &= ~zero;
 		return ret;
 	}
 	
+	private int and(int prm1, int prm2) {
+		int ret = (prm1 & prm2) & 0xff;
+		flagRegister &= subtract;
+		flagRegister &= carry;
+		flagRegister |= halfcarry; 
+		if(ret == 0) flagRegister |= zero;
+		else flagRegister &= ~zero;
+		return ret;
+	}
+
 	public void start() {
 		clock.start();
 	}
-	
 
 	private class Clock implements Runnable {
 

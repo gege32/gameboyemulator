@@ -52,8 +52,10 @@ public class Display extends JFrame{
 	    }
 
 	    public void paintComponent(Graphics g) {
-	        
+	    	super.paintComponent(g);
+	        g.setColor(Color.BLACK);
 	        int width = 0;
+	        g.drawLine(15, 20, 25, 17);
 			for(int i = 0; i<=15; i++) {
 				for(int j= 0; j < 15; j++, j++) {
 					int line = tiles[i][j] | tiles[i][j+1];
@@ -82,7 +84,6 @@ public class Display extends JFrame{
 				}
 				width += 10;
 			}
-			super.paintComponent(g);
 	    }  
 	}
 	
