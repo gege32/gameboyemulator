@@ -47,5 +47,8 @@ public class Globals {
 	
 	public static final int IO_PORTS_ADDRESS = 0xFF00;
 	
+	//RAM registers	
+	public static final int LCDC_ADDRESS = 0xff40;
+	
 	
 }
